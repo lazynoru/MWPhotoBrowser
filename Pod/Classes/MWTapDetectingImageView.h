@@ -7,7 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "FLAnimatedImageView.h"
+#import <FLAnimatedImage/FLAnimatedImageView.h>
 
 @protocol MWTapDetectingImageViewDelegate;
 
