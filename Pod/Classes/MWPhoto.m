@@ -34,6 +34,7 @@
 @implementation MWPhoto
 
 @synthesize underlyingImage = _underlyingImage; // synth property from protocol
+@synthesize underlyingImageData = _underlyingImageData;
 
 #pragma mark - Class Methods
 
@@ -145,6 +146,10 @@
     return _underlyingImage;
 }
 
+- (NSData *)underlyingImageData {
+    return _underlyingImageData;
+}
+
 - (void)loadUnderlyingImageAndNotify {
     NSAssert([[NSThread currentThread] isMainThread], @"This method must be called on the main thread.");
     if (_loadingInProgress) return;
@@ -158,6 +163,7 @@
     }
     @catch (NSException *exception) {
         self.underlyingImage = nil;
+        self.underlyingImageData = nil;
         _loadingInProgress = NO;
         [self imageLoadingComplete];
     }
@@ -210,28 +216,25 @@
 
 // Load from local file
 - (void)_performLoadUnderlyingImageAndNotifyWithWebURL:(NSURL *)url {
-    [[SDWebImageDownloader sharedDownloader] downloadImageWithURL:url
-                                                          options:0
-                                                         progress:^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
-                                                             if (expectedSize > 0) {
-                                                                 float progress = receivedSize / (float)expectedSize;
-                                                                 NSDictionary* dict = [NSDictionary dictionaryWithObjectsAndKeys:
-                                                                                       [NSNumber numberWithFloat:progress], @"progress",
-                                                                                       self, @"photo", nil];
-                                                                 [[NSNotificationCenter defaultCenter] postNotificationName:MWPHOTO_PROGRESS_NOTIFICATION object:dict];
-                                                             }
-                                                         }
-                                                        completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
-                                                            if (error) {
-                                                                MWLog(@"SDWebImage failed to download image: %@", error);
-                                                            }
-                                                            _webImageOperation = nil;
-                                                            self.underlyingImage = image;
-                                                            dispatch_async(dispatch_get_main_queue(), ^{
-                                                                [self imageLoadingComplete];
-                                                            });
-                                                        }
-     ];
+    [[SDWebImageManager sharedManager] loadImageWithURL:url options:0 progress:^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
+        if (expectedSize > 0) {
+            float progress = receivedSize / (float)expectedSize;
+            NSDictionary* dict = [NSDictionary dictionaryWithObjectsAndKeys:
+                                  [NSNumber numberWithFloat:progress], @"progress",
+                                  self, @"photo", nil];
+            [[NSNotificationCenter defaultCenter] postNotificationName:MWPHOTO_PROGRESS_NOTIFICATION object:dict];
+        }
+    } completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, SDImageCacheType cacheType, BOOL finished, NSURL * _Nullable imageURL) {
+        if (error) {
+            MWLog(@"SDWebImage failed to download image: %@", error);
+        }
+        _webImageOperation = nil;
+        self.underlyingImage = image;
+        self.underlyingImageData = data;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self imageLoadingComplete];
+        });
+    }];
 }
 
 // Load from local file
@@ -240,6 +243,7 @@
         @autoreleasepool {
             @try {
                 self.underlyingImage = [UIImage imageWithContentsOfFile:url.path];
+                self.underlyingImageData = [NSData dataWithContentsOfFile:url.path];
                 if (!_underlyingImage) {
                     MWLog(@"Error loading photo from path: %@", url.path);
                 }
@@ -308,6 +312,7 @@
 - (void)unloadUnderlyingImage {
     _loadingInProgress = NO;
 	self.underlyingImage = nil;
+    self.underlyingImageData = nil;
 }
 
 - (void)imageLoadingComplete {

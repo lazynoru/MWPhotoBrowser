@@ -13,6 +13,7 @@
 #import "MWPhoto.h"
 #import "MWPhotoBrowserPrivate.h"
 #import "UIImage+MWPhotoBrowser.h"
+#import <FLAnimatedImage/FLAnimatedImage.h>
 
 // Private methods and properties
 @interface MWZoomingScrollView () {
@@ -140,7 +141,18 @@
 			[self hideLoadingIndicator];
 			
 			// Set image
-			_photoImageView.image = img;
+            if (nil != _photo.underlyingImageData) {
+                FLAnimatedImage *animatedImage = [[FLAnimatedImage alloc] initWithAnimatedGIFData:_photo.underlyingImageData];
+                if (nil != animatedImage) {
+                    _photoImageView.animatedImage = animatedImage;
+                } else {
+                    _photoImageView.image = img;
+                }
+                
+            } else {
+                _photoImageView.image = img;
+            }
+
 			_photoImageView.hidden = NO;
 			
 			// Setup photo frame
