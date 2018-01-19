@@ -93,6 +93,7 @@
     self.playButton = nil;
     _photoImageView.hidden = NO;
     _photoImageView.image = nil;
+    _photoImageView.animatedImage = nil;
     _index = NSUIntegerMax;
 }
 
@@ -179,6 +180,7 @@
 - (void)displayImageFailure {
     [self hideLoadingIndicator];
     _photoImageView.image = nil;
+    _photoImageView.animatedImage = nil;
     
     // Show if image is not empty
     if (![_photo respondsToSelector:@selector(emptyImage)] || !_photo.emptyImage) {
